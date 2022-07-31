@@ -129,7 +129,7 @@ client.on('message', message => {
                     
             }
             if(embedName === "pronouns") {
-                var inlineFields = assignableRoles.map((role) => {
+                var inlinePronounFields = assignableRoles.map((role) => {
                     if(role.type == "pronoun") {
                         return { name: role.desc, value: `<@&${role.roleObj.id}>`, inline: true }
                     }
@@ -139,7 +139,7 @@ client.on('message', message => {
                     .setTitle('List of Pronoun Roles')
                     .setDescription('These are the pronoun roles. They have no function other than showing up on your server profile.  ```\n!assign role name```')
                     .addField('\u200B', '\u200B')
-                    .addFields(inlineFields)
+                    .addFields(inlinePronounFields)
                     message.delete({ timeout: 1000 });
                     return message.channel.send(rolesEmbed);
                     
