@@ -113,7 +113,7 @@ client.on('message', message => {
             } 
             let embedName = args.join(" ");
             if(embedName === "roles") {
-                var inlineFields = assignableRoles.map((role) => {
+                var inlineFields = assignableRoles.filter((role) => role.type == "game").map((role) => {
                     if(role.type == "game") {
                         return { name: role.desc, value: `<@&${role.roleObj.id}>`, inline: true }
                     }
@@ -129,10 +129,8 @@ client.on('message', message => {
                     
             }
             if(embedName === "pronouns") {
-                var inlinePronounFields = assignableRoles.map((role) => {
-                    if(role.type == "pronoun") {
+                var inlinePronounFields = assignableRoles.filter((role) => role.type == "pronoun").map((role) => {
                         return { name: role.desc, value: `<@&${role.roleObj.id}>`, inline: true }
-                    }
                 })
                 const rolesEmbed = new Discord.MessageEmbed()
                     .setColor('#0099ff')
