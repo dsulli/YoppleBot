@@ -11,13 +11,15 @@ client.once('ready', () => {
     client.user.setActivity('YOUR COMMANDS :-)', { type: 'WATCHING' });
     let floonTown = client.guilds.cache.find(guild => guild.name === "Floon Town");
     assignableRoles = [
-        {name:"ffxiv", desc: "Final Fantasy XIV"},
-        {name:"pkmn raids", desc: "Pokemon SwSh Raids"},
-        {name: "league of legs", desc: "League of Legends"},
-        {name:"buster", desc: "Yokai Watch Busters"},
-        {name: "minecraft", desc: "Minecraft"},
-        {name: "party gamer", desc: "Party Games"},
-        
+        {name:"ffxiv", desc: "Final Fantasy XIV", type: "game"},
+        {name:"pkmn raids", desc: "Pokemon SwSh Raids", type: "game"},
+        {name: "league of legs", desc: "League of Legends", type: "game"},
+        {name:"buster", desc: "Yokai Watch Busters", type: "game"},
+        {name: "minecraft", desc: "Minecraft", type: "game"},
+        {name: "party gamer", desc: "Party Games", type: "game"},
+        {name: "she/her", desc: "she/her", type: "pronoun"},
+        {name: "he/him", desc: "he/him", type: "pronoun"},
+        {name: "they/them", desc: "they/them", type: "pronoun"},
     ];
     assignableRoles = assignableRoles.map((role) => {
         var foundRole = floonTown.roles.cache.find(channel => channel.name === role.name);
@@ -25,7 +27,7 @@ client.once('ready', () => {
             role.roleObj = foundRole;
             return role;
         }
-    })
+    });
 });
 
 const adminRoles = [
@@ -112,12 +114,30 @@ client.on('message', message => {
             let embedName = args.join(" ");
             if(embedName === "roles") {
                 var inlineFields = assignableRoles.map((role) => {
-                    return { name: role.desc, value: `<@&${role.roleObj.id}>`, inline: true }
+                    if(role.type == "game") {
+                        return { name: role.desc, value: `<@&${role.roleObj.id}>`, inline: true }
+                    }
                 })
                 const rolesEmbed = new Discord.MessageEmbed()
                     .setColor('#0099ff')
                     .setTitle('List of Assignable Roles')
                     .setDescription('These are the roles that you can assign yourselves. They are *pingable* roles for people to look for people to play games with. Do not assign yourself a role if you do not plan on playing the game the role is made for.  ```\n!assign role name```')
+                    .addField('\u200B', '\u200B')
+                    .addFields(inlineFields)
+                    message.delete({ timeout: 1000 });
+                    return message.channel.send(rolesEmbed);
+                    
+            }
+            if(embedName === "pronouns") {
+                var inlineFields = assignableRoles.map((role) => {
+                    if(role.type == "pronoun") {
+                        return { name: role.desc, value: `<@&${role.roleObj.id}>`, inline: true }
+                    }
+                })
+                const rolesEmbed = new Discord.MessageEmbed()
+                    .setColor('#0099ff')
+                    .setTitle('List of Pronoun Roles')
+                    .setDescription('These are the pronoun roles. They have no function other than showing up on your server profile.  ```\n!assign role name```')
                     .addField('\u200B', '\u200B')
                     .addFields(inlineFields)
                     message.delete({ timeout: 1000 });
