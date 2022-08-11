@@ -1,10 +1,28 @@
-const Discord = require('discord.js');
-const client = new Discord.Client();
+const fs = require('node:fs');
+const path = require('node:path')
+const { Client, Collection, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle   } = require('discord.js');
+
+const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent] });
 require("dotenv").config();
+client.commands = new Collection();
+
+const commandsPath = path.join(__dirname, 'commands');
+const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
+
+for (const file of commandFiles) {
+	const filePath = path.join(commandsPath, file);
+	const command = require(filePath);
+	// Set a new item in the Collection
+	// With the key as the command name and the value as the exported module
+	client.commands.set(command.data.name, command);
+}
 
 var assignableRoles = [];
 
 let prefix = process.env.PREFIX;
+let clientId = process.env.CLIENTID;
+let guildId = process.env.GUILDID;
+let token = process.env.DJS_TOKEN;
 
 client.once('ready', () => {
     console.log('Ready!');
@@ -35,120 +53,52 @@ const adminRoles = [
     "michael"
 ];
 
-client.on('message', message => {
-    let member = message.member;
-    if (!message.content.startsWith(prefix) || message.author.bot) return;
-
-    const args = message.content.slice(prefix.length).trim().split(/ +/);
-    const command = args.shift().toLowerCase();
-
-    switch(command)  {
-        case "assign" :
-            if (!args.length) {
-                return message.channel.send(`Beep. You didn't say which role you wanted, ${message.author}.`);
-            } else {
-                var roleName = args.join(" ");
-                let selectedRole = assignableRoles.find(role => role.name === roleName);
-
-                // Cases: Role is not assignable, role doesn't exist, user already has role
-                if(selectedRole == undefined && message.guild.roles.cache.find(channel => channel.name === roleName) !== undefined) {
-                    return message.channel.send(`Beep. I see you trying to assign yourself a role that isn't on my assignable role list. >:)`);
-                } else if(selectedRole == undefined || selectedRole.roleObj == undefined) {
-                    return message.channel.send(`Beep. ${roleName} is not a role. The role name is case sensitive.`);
-                } else if( selectedRole.roleObj !== undefined && member.roles.cache.has(selectedRole.roleObj.id)) {
-                    return message.channel.send(`Beep. You already have this role. :-)`);
-                }
-    
-                // Add role
-                member.roles.add(selectedRole.roleObj).then(() => {
-                    return message.channel.send(`Beep. The role you have assigned yourself is ${roleName}.`);
-                }).catch((err) => {
-                    console.log(err);
-                    return message.channel.send(`Beep. ERROR.`);
-                });
-                
-            }
-            break;
-            case "remove" :
-                if (!args.length) {
-                    return message.channel.send(`Beep. You didn't say which role you wanted to remove, ${message.author}.`);
-                } else {
-                    var roleName = args.join(" ");
-                    let selectedRole = assignableRoles.find(role => role.name === roleName);
-    
-                    // Cases: Role is not assignable, role doesn't exist, user doesn't have role
-                    if(selectedRole == undefined && message.guild.roles.cache.find(channel => channel.name === roleName) !== undefined) {
-                        return message.channel.send(`Beep. This is not a role that you can remove.`);
-                    } else if(selectedRole == undefined || selectedRole.roleObj == undefined) {
-                        return message.channel.send(`Beep. ${roleName} is not a role. The role name is case sensitive.`);
-                    } else if( selectedRole.roleObj !== undefined && !member.roles.cache.has(selectedRole.roleObj.id)) {
-                        return message.channel.send(`Beep. You don't have this role.`);
-                    } else if(member.roles.cache.has(selectedRole.roleObj.id)) {
-                        // Remove role
-                        member.roles.remove(selectedRole.roleObj).then(() => {
-                            return message.channel.send(`Beep. The role you have removed from yourself is ${roleName}.`);
-                        }).catch((err) => {
-                            console.log(err);
-                            return message.channel.send(`Beep. ERROR.`);
-                        });
-                    }
+client.on('interactionCreate', async interaction => {
+    if (interaction.isButton()) {
+        const buttonID = interaction.customId;
         
-                    
-                    
-                }
-                break;
-        case "embed":
-            var foundAdminRole = false;
-            adminRoles.forEach(adminRole => {
-                let foundRole = message.guild.roles.cache.find(channel => channel.name === adminRole);
-                if(foundRole !== undefined ) {
-                    foundAdminRole = true;
-                }
-            })
-            if(!foundAdminRole ) {
-                return;
-            }
-            if (!args.length) {
-                return message.channel.send(`Beep. You didn't say which message you wanted to embed, ${message.author}.`);
-            } 
-            let embedName = args.join(" ");
-            if(embedName === "roles") {
-                var inlineFields = assignableRoles.filter((role) => role.type == "game").map((role) => {
-                    if(role.type == "game") {
-                        return { name: role.desc, value: `<@&${role.roleObj.id}>`, inline: true }
-                    }
-                })
-                const rolesEmbed = new Discord.MessageEmbed()
-                    .setColor('#0099ff')
-                    .setTitle('List of Assignable Roles')
-                    .setDescription('These are the roles that you can assign yourselves. They are *pingable* roles for people to look for people to play games with. Do not assign yourself a role if you do not plan on playing the game the role is made for.  ```\n!assign role name```')
-                    .addField('\u200B', '\u200B')
-                    .addFields(inlineFields)
-                    message.delete({ timeout: 1000 });
-                    return message.channel.send(rolesEmbed);
-                    
-            }
-            if(embedName === "pronouns") {
-                var inlinePronounFields = assignableRoles.filter((role) => role.type == "pronoun").map((role) => {
-                        return { name: role.desc, value: `<@&${role.roleObj.id}>`, inline: true }
-                })
-                const rolesEmbed = new Discord.MessageEmbed()
-                    .setColor('#0099ff')
-                    .setTitle('List of Pronoun Roles')
-                    .setDescription('These are the pronoun roles. They have no function other than showing up on your server profile.  ```\n!assign role name```')
-                    .addField('\u200B', '\u200B')
-                    .addFields(inlinePronounFields)
-                    message.delete({ timeout: 1000 });
-                    return message.channel.send(rolesEmbed);
-                    
-            }
-            
-            break;
-    }
+        const member = interaction.member; // get member from the interaction - person who clicked the button
 
+        let selectedRole = assignableRoles.find(role => role.name === buttonID)
+
+        if (member.roles.cache.has(selectedRole.roleObj.id)) { // if they already have the role
+            member.roles.remove(selectedRole.roleObj); // remove it
+            return interaction.reply({
+                content: 'Successfully removed role!',
+                ephemeral: true
+            });
+        } else { // if they don't have the role
+            member.roles.add(selectedRole.roleObj); // add it
+            return interaction.reply({
+                content: 'Successfully added role!',
+                ephemeral: true
+            })
+        }
+    }
+    if(interaction.isChatInputCommand()) {
+        const command = client.commands.get(interaction.commandName);
+
+        if (!command) return;
+
+        try {
+            await command.execute(interaction);
+        } catch (error) {
+            console.error(error);
+            await interaction.reply({ content: 'There was an error while executing this command!', ephemeral: true });
+        }
+    }
+	
+});
+
+
+
+client.on('messageCreate', async message => {
+    if (message.author.bot) return;
+
+    
 	if (message.content === `${prefix}beep`) {
         // send back "Pong." to the channel the message was sent in
-        message.channel.send('boop');
+        message.channel.send({ content:'boop'});
     }
     
     if (message.content === `${prefix}bada bing`) {
@@ -158,6 +108,95 @@ client.on('message', message => {
     if (message.content === `${prefix}moga`) {
         message.channel.send(`<@513546656659275787> ratio`);
     }
+
+    if (message.content.toLowerCase().includes("cereal")) {
+        message.channel.send(`Croutons are cereal.`);
+    }
+    if (message.content.toLowerCase().includes("crouton")) {
+        message.react("1005984022125613138");
+    }
+    if (message.content.toLowerCase().includes("frog")) {
+        message.react("746583626053058560");
+    }
+    if (message.content.toLowerCase().includes("coffee")) {
+        message.react("827302879303434270");
+    }
+    if (message.content.toLowerCase().includes("drifloon")) {
+        message.react("451612353256095744");
+    }
+    if (message.content.toLowerCase().includes("sleep")) {
+        message.react("623594960024895509");
+    }
+
+    if (message.content === `${prefix}gameroles`) {
+        const row = new ActionRowBuilder();
+        for(var i = 0; i < 3; i++) {
+            if(assignableRoles[i].type === "game") {
+                row.addComponents(
+                    new ButtonBuilder()
+                    .setCustomId(assignableRoles[i].name)
+                    .setLabel(assignableRoles[i].desc)
+                    .setStyle('Primary'),
+                    
+                );
+            }
+        }
+        const row2 = new ActionRowBuilder();
+        for(var i = 3; i < assignableRoles.length; i++) {
+            if(assignableRoles[i].type === "game") {
+                row2.addComponents(
+                    new ButtonBuilder()
+                    .setCustomId(assignableRoles[i].name)
+                    .setLabel(assignableRoles[i].desc)
+                    .setStyle('Primary'),
+                    
+                );
+            }
+        }
+
+        var inlineFields = assignableRoles.filter((role) => role.type == "game").map((role) => {
+                return { name: role.desc, value: `<@&${role.roleObj.id}>`, inline: true };
+        });
+        let rolesEmbed = new EmbedBuilder();
+        rolesEmbed.setColor(0x0099ff)
+        rolesEmbed.setTitle('List of Assignable Roles')
+        rolesEmbed.setDescription('These are the roles that you can assign yourselves. They are *pingable* roles for people to look for people to play games with. Do not assign yourself a role if you do not plan on playing the game the role is made for.')
+        rolesEmbed.addFields({ name: '\u200B', value: '\u200B' })
+            .addFields(inlineFields);
+            
+        message.channel.send({
+            embeds: [rolesEmbed],
+            components: [row, row2]
+        })
+        message.delete({ timeout: 1000 });
+    }
+
+    if (message.content === `${prefix}pronounroles`) {
+        const row = new ActionRowBuilder();
+        for(var i = 0; i < assignableRoles.length; i++) {
+            if(assignableRoles[i].type === "pronoun") {
+                row.addComponents(
+                    new ButtonBuilder()
+                    .setCustomId(assignableRoles[i].name)
+                    .setLabel(assignableRoles[i].desc)
+                    .setStyle('Success'),
+                    
+                );
+            }
+        }
+
+        let rolesEmbed = new EmbedBuilder();
+        rolesEmbed.setColor(0x0099ff)
+        rolesEmbed.setTitle('List of Pronoun Roles')
+        rolesEmbed.setDescription('These are the pronoun roles. They have no function other than showing up on your server profile.')
+
+        message.channel.send({
+            embeds: [rolesEmbed],
+            components: [row]
+        })
+        message.delete({ timeout: 1000 });
+    }
+    
 });
 
 client.login(process.env.DJS_TOKEN);
