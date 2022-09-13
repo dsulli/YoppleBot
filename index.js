@@ -106,7 +106,7 @@ client.on('messageCreate', async message => {
     }
 
     if (message.content === `${prefix}moga`) {
-        message.channel.send(`<@513546656659275787> ratio`);
+        message.channel.send(`<@513546656659275787> Happy Birthday Moga! Also, ratio`);
     }
 
     if (message.content.toLowerCase().includes("cereal")) {
